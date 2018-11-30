@@ -73,6 +73,7 @@ void ColladaLoader::ReadGeometries(std::vector<Geometry> *geometries) {
             }
             mesh = mesh->FirstChildElement("mesh");
         }
+        printf("pushing Geometry\n");
         geometries->push_back(data);
         geometry = geometry->NextSiblingElement("geometry");
     }

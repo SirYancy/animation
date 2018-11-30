@@ -5,16 +5,20 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_opengl.h"
 
+using namespace std;
+
 #define GLM_FORCE_RADIANS
 
-void CreateShaderProgram(GLuint shader, GLuint fragShader);
+void CreateShaderProgram(GLuint &vertShader, GLuint &fragShader);
+
+void CreateBuffers(vector<Geometry> *geometries);
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 GLuint shaderProgram;
-GLuint vao, vertexvbo, indexvbo;
+GLuint vao, *vbos;
 
 const char *vertfn = "../shaders/vert.glsl";
 const char *fragfn = "../shaders/frag.glsl";
@@ -61,8 +65,91 @@ int main() {
     ColladaLoader *loader = new ColladaLoader("../models/cowboy.dae");
     auto *geometries = new std::vector<Geometry>();
     loader->ReadGeometries(geometries);
+
+    CreateBuffers(geometries);
+
+    glEnable(GL_DEPTH_TEST);
+
+    bool quit = false;
+
+    SDL_Event windowEvent;
+
+    while(!quit){
+        while(SDL_PollEvent(&windowEvent)){
+            if(windowEvent.type == SDL_QUIT) quit = true;;
+        }
+
+        glClearColor(.2f, .2f, .2f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        GLint unicolor = glGetUniformLocation(shaderProgram, "inColor");
+        glm::vec3 colVec(0.f , 0.7f, 0.f);
+        glUniform4fv(unicolor, 1, glm::value_ptr(colVec));
+
+        glm::mat4 model;
+        GLint uniModel = glGetUniformLocation(shaderProgram, "model");
+        glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+
+        glm::mat4 view = glm::lookAt(
+                glm::vec3(0.0f, 0.0f, -3.0f),
+                glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(0.0f, 1.0f, 0.0f));
+        GLint uniView = glGetUniformLocation(shaderProgram, "view");
+        glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+
+        glm::mat4 proj = glm::perspective(3.14f/4, aspect, 0.01f, 100.0f);
+        GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
+        glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+
+        glUseProgram(shaderProgram);
+        glBindVertexArray(vao);
+        auto g = *geometries;
+        glDrawElements(GL_TRIANGLES, g[0].index_count, GL_UNSIGNED_SHORT, g[0].indices);
+        SDL_GL_SwapWindow(window);
+
+    }
+
+
     loader->FreeGeometries(geometries);
     return 0;
+}
+
+void CreateBuffers(vector<Geometry> *geometries) {
+    glGenVertexArrays(1, &vao);
+    vbos = new GLuint[2];
+
+
+    glGenBuffers(2, vbos);
+
+    glBindVertexArray(vao);
+
+    auto g = *geometries;
+
+    // bind position data
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[0]);
+
+    int size = 3 * sizeof(float);
+
+
+    glBufferData(GL_ARRAY_BUFFER, g[0].map["VERTEX"].size,
+            g[0].map["VERTEX"].data, GL_STATIC_DRAW);
+    int loc = glGetAttribLocation(shaderProgram, "position");
+    glVertexAttribPointer(loc, g[0].map["VERTEX"].stride,
+            g[0].map["VERTEX"].type, GL_FALSE, 0,0);
+    glEnableVertexAttribArray(0);
+
+    // bind Normal data
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
+    glBufferData(GL_ARRAY_BUFFER, g[0].map["NORMAL"].size,
+                 g[0].map["NORMAL"].data, GL_STATIC_DRAW);
+    loc = glGetAttribLocation(shaderProgram, "inNormal");
+    glVertexAttribPointer(loc, g[0].map["NORMAL"].stride,
+                          g[0].map["NORMAL"].type, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
 }
 
 int LoadShader(const char*filename, GLuint shaderID){
@@ -103,7 +190,7 @@ int LoadShader(const char*filename, GLuint shaderID){
     }
     return 0;
 }
-void CreateShaderProgram(GLuint *vertShader, GLuint &fragShader) {
+void CreateShaderProgram(GLuint &vertShader, GLuint &fragShader) {
     vertShader = glCreateShader(GL_VERTEX_SHADER);
     fragShader = glCreateShader(GL_FRAGMENT_SHADER);
     LoadShader(vertfn, vertShader);
@@ -115,6 +202,4 @@ void CreateShaderProgram(GLuint *vertShader, GLuint &fragShader) {
 //     glBindFragDataLocation(shaderProgram, 0, "outColor");
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
-
-
 }
