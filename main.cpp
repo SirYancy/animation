@@ -20,6 +20,7 @@ void CreateBuffers(vector<Geometry> *geometries);
 GLuint shaderProgram;
 GLuint vao, *vbos;
 
+const char *model = "../models/plane.dae";
 const char *vertfn = "../shaders/vert.glsl";
 const char *fragfn = "../shaders/frag.glsl";
 
@@ -62,7 +63,7 @@ int main() {
     CreateShaderProgram(vertShader, fragShader);
 
     printf("Loading Model\n");
-    ColladaLoader *loader = new ColladaLoader("../models/cowboy.dae");
+    ColladaLoader *loader = new ColladaLoader(model);
     auto *geometries = new std::vector<Geometry>();
     loader->ReadGeometries(geometries);
 
@@ -77,9 +78,19 @@ int main() {
     while(!quit){
         while(SDL_PollEvent(&windowEvent)){
             if(windowEvent.type == SDL_QUIT) quit = true;;
+            if(windowEvent.type == SDL_KEYUP){
+                switch(windowEvent.key.keysym.sym){
+                    case SDLK_ESCAPE:
+                    case SDLK_q:
+                        quit = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
         }
 
-        glClearColor(.2f, .2f, .2f, 1.0f);
+        glClearColor(0.f, 0.f, 1.f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         GLint unicolor = glGetUniformLocation(shaderProgram, "inColor");
@@ -91,7 +102,7 @@ int main() {
         glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
         glm::mat4 view = glm::lookAt(
-                glm::vec3(0.0f, 0.0f, -3.0f),
+                glm::vec3(0.0f, 0.0f, -5.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
         GLint uniView = glGetUniformLocation(shaderProgram, "view");
@@ -141,10 +152,10 @@ void CreateBuffers(vector<Geometry> *geometries) {
     // bind Normal data
     glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
     glBufferData(GL_ARRAY_BUFFER, g[0].map["NORMAL"].size,
-                 g[0].map["NORMAL"].data, GL_STATIC_DRAW);
+            g[0].map["NORMAL"].data, GL_STATIC_DRAW);
     loc = glGetAttribLocation(shaderProgram, "inNormal");
     glVertexAttribPointer(loc, g[0].map["NORMAL"].stride,
-                          g[0].map["NORMAL"].type, GL_FALSE, 0, 0);
+            g[0].map["NORMAL"].type, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);

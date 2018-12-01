@@ -17,16 +17,16 @@ struct SourceData {
     GLenum type;
     unsigned int size;
     unsigned int stride;
+    unsigned int offset;
     void *data;
 };
 
-typedef std::map<std::string, SourceData> SourceMap;
-
-struct Geometry{
+struct Geometry {
     std::string name;
-    SourceMap map;
-    int index_count;
-    unsigned short *indices;
+    SourceData position;
+    SourceData normals;
+    SourceData texCoords;
+    void *data;
 };
 
 class ColladaLoader {
@@ -36,13 +36,19 @@ private:
 
     SourceData ReadElement(XMLElement *);
 
+    XMLElement *GetSource(std::string sourceName, XMLElement *mesh);
+
+    XMLElement *GetInput(std::string semantic, XMLElement *element);
+
+    void BuildBuffer(unsigned short *indices, int indicesCount, int primitiveCount, Geometry *g);
 
 public:
     explicit ColladaLoader(std::string filename);
 
-    void ReadGeometries(std::vector<Geometry>*);
+    void ReadGeometry(Geometry *g);
 
-    void FreeGeometries(std::vector<Geometry>*);
+    void FreeGeometry(Geometry *g);
+
 };
 
 #endif //MAZE_COLLADALOADER_H
