@@ -20,7 +20,7 @@ void CreateBuffers(Geometry *g);
 GLuint shaderProgram;
 GLuint vao, vbos;
 
-const char *model = "../models/sphere.dae";
+const char *model = "../models/plane.dae";
 const char *vertfn = "../shaders/vert.glsl";
 const char *fragfn = "../shaders/frag.glsl";
 
@@ -64,7 +64,7 @@ int main() {
 
     printf("Loading Model\n");
     ColladaLoader *loader = new ColladaLoader(model);
-    Geometry *geometry = new Geometry();
+    auto *geometry = new Geometry();
 
     loader->ReadGeometry(geometry);
 
@@ -77,6 +77,8 @@ int main() {
     SDL_Event windowEvent;
 
     while(!quit){
+        int x,y;
+        SDL_GetRelativeMouseState(&x, &y);
         while(SDL_PollEvent(&windowEvent)){
             if(windowEvent.type == SDL_QUIT) quit = true;;
             if(windowEvent.type == SDL_KEYUP){
@@ -91,8 +93,10 @@ int main() {
             }
         }
 
-        glClearColor(0.f, 0.f, 1.f, 1.0f);
+        glClearColor(0.2f, 0.4f, 0.7f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(shaderProgram);
 
         GLint unicolor = glGetUniformLocation(shaderProgram, "inColor");
         glm::vec3 colVec(0.f , 0.7f, 0.f);
@@ -103,54 +107,59 @@ int main() {
         glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
         glm::mat4 view = glm::lookAt(
-                glm::vec3(0.0f, 0.0f, -5.0f),
+                glm::vec3(0.5f, -5.f, 0.5f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
-                glm::vec3(0.0f, 1.0f, 0.0f));
+                glm::vec3(0.0f, 0.0f, 1.0f));
         GLint uniView = glGetUniformLocation(shaderProgram, "view");
         glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-        glm::mat4 proj = glm::perspective(3.14f/4, aspect, 0.01f, 100.0f);
+        glm::mat4 proj = glm::perspective(3.14f/4, aspect, 0.001f, 1000.0f);
         GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
         glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
-        glUseProgram(shaderProgram);
         glBindVertexArray(vao);
 
-        glDrawArrays(GL_TRIANGLES, 0, geometry->primitiveCount/3);
+        glDrawArrays(GL_TRIANGLES, 0, geometry->primitiveCount*3);
 
         SDL_GL_SwapWindow(window);
 
     }
-
 
     loader->FreeGeometry(geometry);
     return 0;
 }
 
 void CreateBuffers(Geometry *g) {
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbos);
 
+    glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    // bind position data
+    glGenBuffers(1, &vbos);
     glBindBuffer(GL_ARRAY_BUFFER, vbos);
 
-    int size = g->position.size + g->normals.size;
+    float *data = g->vertexData->data();
 
-    glBufferData(GL_ARRAY_BUFFER, size, g->data, GL_STATIC_DRAW);
+    for(int i = 0; i < g->vertexData->size(); i++){
+        if(i%8 == 0) printf("Vertex\n");
+        printf("%f\n",data[i]);
+    }
+
+
+    glBufferData(GL_ARRAY_BUFFER, g->vertexData->size() * sizeof(float), data, GL_STATIC_DRAW);
 
     // Bind Position Data
     GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-    glVertexAttribPointer(posAttrib, g->position.stride, g->position.type, GL_FALSE, size, 0);
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 0);
     glEnableVertexAttribArray(posAttrib);
 
     // bind Normal data
     GLint normAttrib = glGetAttribLocation(shaderProgram, "inNormal");
-    glVertexAttribPointer(normAttrib, g->normals.stride, g->normals.type, GL_FALSE, size, (void *)g->position.size);
+    glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
     glEnableVertexAttribArray(normAttrib);
 
-    // TODO TEXTURE
+    GLint texAttrib = glGetAttribLocation(shaderProgram, "inTexCoord");
+    glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+    glEnableVertexAttribArray(texAttrib);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -204,7 +213,7 @@ void CreateShaderProgram(GLuint &vertShader, GLuint &fragShader) {
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertShader);
     glAttachShader(shaderProgram, fragShader);
-//     glBindFragDataLocation(shaderProgram, 0, "outColor");
+    glBindFragDataLocation(shaderProgram, 0, "outColor");
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
 }

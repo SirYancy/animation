@@ -10,6 +10,7 @@
 #include <glad.h>
 #include <map>
 #include "../tinyxml/tinyxml2.h"
+#include "../glm/glm.hpp"
 
 using namespace tinyxml2;
 
@@ -27,7 +28,7 @@ struct Geometry {
     SourceData normals;
     SourceData texCoords;
     int primitiveCount;
-    void *data;
+    std::vector<float> *vertexData;
 };
 
 class ColladaLoader {

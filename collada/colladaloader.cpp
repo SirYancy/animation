@@ -35,13 +35,13 @@ void ColladaLoader::ReadGeometry(Geometry *data) {
     input = GetInput("POSITION", vertices);
 
     sourceName = std::string(input->Attribute("source"));
-    sourceName = sourceName.erase(0,1);
+    sourceName = sourceName.erase(0, 1);
 
     std::cout << input->Attribute("semantic") << " " << sourceName << std::endl;
 
     source = GetSource(sourceName, mesh);
     data->position = ReadElement(source);
-    int offset;
+    unsigned int offset;
     input->QueryAttribute("offset", &offset);
     data->position.offset = offset;
 
@@ -56,15 +56,26 @@ void ColladaLoader::ReadGeometry(Geometry *data) {
     data->normals = ReadElement(source);
     input->QueryAttribute("offset", &data->normals.offset);
 
-    // TODO Process Texture Data
+
+    // Process Texture Data
+    input = GetInput("TEXCOORD", triangles);
+    sourceName = std::string(input->Attribute("source"));
+    sourceName = sourceName.erase(0, 1);
+
+    std::cout << input->Attribute("semantic") << " " << sourceName << std::endl;
+
+    source = GetSource(sourceName, mesh);
+    data->texCoords = ReadElement(source);
+    input->QueryAttribute("offset", &data->texCoords.offset);
+
 
     triangles->QueryAttribute("count", &primitiveCount);
 
     data->primitiveCount = primitiveCount;
 
-    indicesCount = primitiveCount * (data->normals.stride + data->position.stride); // TODO + texture stride
+    indicesCount = primitiveCount * 3 * 3;
 
-    auto *indices = (unsigned short*)malloc(indicesCount * sizeof(unsigned short));
+    auto *indices = (unsigned short *) malloc(indicesCount * sizeof(unsigned short));
 
     std::cout << "Primitives: " << primitiveCount << std::endl <<
               "Indices: " << indicesCount << std::endl;
@@ -119,14 +130,14 @@ void ColladaLoader::FreeGeometry(Geometry *g) {
     free(g->normals.data);
     free(g->position.data);
     free(g->texCoords.data);
-    free(g->data);
+    free(g->vertexData);
     free(g);
 }
 
 XMLElement *ColladaLoader::GetSource(std::string sourceName, XMLElement *mesh) {
     XMLElement *source;
     source = mesh->FirstChildElement("source");
-    while(source != nullptr) {
+    while (source != nullptr) {
         if (std::string(source->Attribute("id")) == sourceName) {
             return source;
         }
@@ -138,8 +149,8 @@ XMLElement *ColladaLoader::GetSource(std::string sourceName, XMLElement *mesh) {
 XMLElement *ColladaLoader::GetInput(std::string semantic, XMLElement *element) {
     XMLElement *input;
     input = element->FirstChildElement("input");
-    while(input != nullptr) {
-        if(std::string(input->Attribute("semantic")) == semantic) {
+    while (input != nullptr) {
+        if (std::string(input->Attribute("semantic")) == semantic) {
             return input;
         }
         input = input->NextSiblingElement("input");
@@ -148,22 +159,26 @@ XMLElement *ColladaLoader::GetInput(std::string semantic, XMLElement *element) {
 }
 
 void ColladaLoader::BuildBuffer(unsigned short *indices, int indicesCount, int primitiveCount, Geometry *g) {
-    unsigned int normalOffset, positionOffset, texOffset; //TODO Do Textures
+    g->vertexData = new std::vector<float>();
 
-    positionOffset = g->position.offset;
-    normalOffset = g->normals.offset;
-    // TODO texOffset = g->texCoords.offset;
+    for (int i = 0; i < indicesCount; i++) {
 
-    g->data = (float *) malloc(indicesCount * sizeof(float));
+        if (i % 3 == 0) { // Do Position
+            printf("Position\n");
+            g->vertexData->push_back(((float *) (g->position.data))[indices[i] * g->position.stride]);
+            g->vertexData->push_back(((float *) (g->position.data))[indices[i] * g->position.stride + 1]);
+            g->vertexData->push_back(((float *) (g->position.data))[indices[i] * g->position.stride + 2]);
+        } else if (i % 3 == 1) { // Do normals
+            printf("Normals\n");
+            g->vertexData->push_back(((float *) (g->normals.data))[indices[i] * g->normals.stride]);
+            g->vertexData->push_back(((float *) (g->normals.data))[indices[i] * g->normals.stride + 1]);
+            g->vertexData->push_back(((float *) (g->normals.data))[indices[i] * g->normals.stride + 2]);
+        } else { //i%3 == 2  Do Texcoords
+            printf("Tex\n");
+            g->vertexData->push_back(((float *) (g->texCoords.data))[indices[i] * g->texCoords.stride]);
+            g->vertexData->push_back(((float *) (g->texCoords.data))[indices[i] * g->texCoords.stride + 1]);
+        }
 
-    for(int i = 0; i < primitiveCount; i++){
-        int index = i * (positionOffset + normalOffset); //TODO TEXTURE
-        ((float*) g->data)[index] = ((float *)g->position.data)[indices[index+positionOffset]];
-        ((float*) g->data)[index+1] = ((float *)g->position.data)[indices[index+positionOffset] + 1];
-        ((float*) g->data)[index+2] = ((float *)g->position.data)[indices[index+positionOffset] + 2];
-        ((float*) g->data)[index+3] = ((float *)g->normals.data)[indices[index+normalOffset]];
-        ((float*) g->data)[index+4] = ((float *)g->normals.data)[indices[index+normalOffset] + 1];
-        ((float*) g->data)[index+5] = ((float *)g->normals.data)[indices[index+normalOffset] + 2];
     }
 }
 
