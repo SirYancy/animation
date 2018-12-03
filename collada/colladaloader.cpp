@@ -32,7 +32,7 @@ void ColladaLoader::ReadGeometry(Geometry *data) {
     }
 
     // First process Position Data
-    input = GetInput("VERTEX", vertices);
+    input = GetInput("POSITION", vertices);
 
     sourceName = std::string(input->Attribute("source"));
     sourceName = sourceName.erase(0,1);
@@ -41,7 +41,9 @@ void ColladaLoader::ReadGeometry(Geometry *data) {
 
     source = GetSource(sourceName, mesh);
     data->position = ReadElement(source);
-    input->QueryAttribute("offset", &data->position.offset);
+    int offset;
+    input->QueryAttribute("offset", &offset);
+    data->position.offset = offset;
 
     // Process Normal Data
     input = GetInput("NORMAL", triangles);
@@ -57,6 +59,8 @@ void ColladaLoader::ReadGeometry(Geometry *data) {
     // TODO Process Texture Data
 
     triangles->QueryAttribute("count", &primitiveCount);
+
+    data->primitiveCount = primitiveCount;
 
     indicesCount = primitiveCount * (data->normals.stride + data->position.stride); // TODO + texture stride
 
@@ -128,9 +132,18 @@ XMLElement *ColladaLoader::GetSource(std::string sourceName, XMLElement *mesh) {
         }
         source = source->NextSiblingElement("source");
     }
+    return nullptr;
 }
 
 XMLElement *ColladaLoader::GetInput(std::string semantic, XMLElement *element) {
+    XMLElement *input;
+    input = element->FirstChildElement("input");
+    while(input != nullptr) {
+        if(std::string(input->Attribute("semantic")) == semantic) {
+            return input;
+        }
+        input = input->NextSiblingElement("input");
+    }
     return nullptr;
 }
 

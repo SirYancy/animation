@@ -26,6 +26,7 @@ struct Geometry {
     SourceData position;
     SourceData normals;
     SourceData texCoords;
+    int primitiveCount;
     void *data;
 };
 

@@ -11,16 +11,16 @@ using namespace std;
 
 void CreateShaderProgram(GLuint &vertShader, GLuint &fragShader);
 
-void CreateBuffers(vector<Geometry> *geometries);
+void CreateBuffers(Geometry *g);
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 GLuint shaderProgram;
-GLuint vao, *vbos;
+GLuint vao, vbos;
 
-const char *model = "../models/plane.dae";
+const char *model = "../models/sphere.dae";
 const char *vertfn = "../shaders/vert.glsl";
 const char *fragfn = "../shaders/frag.glsl";
 
@@ -64,10 +64,11 @@ int main() {
 
     printf("Loading Model\n");
     ColladaLoader *loader = new ColladaLoader(model);
-    auto *geometries = new std::vector<Geometry>();
-    loader->ReadGeometries(geometries);
+    Geometry *geometry = new Geometry();
 
-    CreateBuffers(geometries);
+    loader->ReadGeometry(geometry);
+
+    CreateBuffers(geometry);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -114,49 +115,42 @@ int main() {
 
         glUseProgram(shaderProgram);
         glBindVertexArray(vao);
-        auto g = *geometries;
-        glDrawElements(GL_TRIANGLES, g[0].index_count, GL_UNSIGNED_SHORT, g[0].indices);
+
+        glDrawArrays(GL_TRIANGLES, 0, geometry->primitiveCount/3);
+
         SDL_GL_SwapWindow(window);
 
     }
 
 
-    loader->FreeGeometries(geometries);
+    loader->FreeGeometry(geometry);
     return 0;
 }
 
-void CreateBuffers(vector<Geometry> *geometries) {
+void CreateBuffers(Geometry *g) {
     glGenVertexArrays(1, &vao);
-    vbos = new GLuint[2];
-
-
-    glGenBuffers(2, vbos);
+    glGenBuffers(1, &vbos);
 
     glBindVertexArray(vao);
 
-    auto g = *geometries;
-
     // bind position data
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, vbos);
 
-    int size = 3 * sizeof(float);
+    int size = g->position.size + g->normals.size;
 
+    glBufferData(GL_ARRAY_BUFFER, size, g->data, GL_STATIC_DRAW);
 
-    glBufferData(GL_ARRAY_BUFFER, g[0].map["VERTEX"].size,
-            g[0].map["VERTEX"].data, GL_STATIC_DRAW);
-    int loc = glGetAttribLocation(shaderProgram, "position");
-    glVertexAttribPointer(loc, g[0].map["VERTEX"].stride,
-            g[0].map["VERTEX"].type, GL_FALSE, 0,0);
-    glEnableVertexAttribArray(0);
+    // Bind Position Data
+    GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+    glVertexAttribPointer(posAttrib, g->position.stride, g->position.type, GL_FALSE, size, 0);
+    glEnableVertexAttribArray(posAttrib);
 
     // bind Normal data
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
-    glBufferData(GL_ARRAY_BUFFER, g[0].map["NORMAL"].size,
-            g[0].map["NORMAL"].data, GL_STATIC_DRAW);
-    loc = glGetAttribLocation(shaderProgram, "inNormal");
-    glVertexAttribPointer(loc, g[0].map["NORMAL"].stride,
-            g[0].map["NORMAL"].type, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(1);
+    GLint normAttrib = glGetAttribLocation(shaderProgram, "inNormal");
+    glVertexAttribPointer(normAttrib, g->normals.stride, g->normals.type, GL_FALSE, size, (void *)g->position.size);
+    glEnableVertexAttribArray(normAttrib);
+
+    // TODO TEXTURE
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
