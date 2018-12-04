@@ -42,7 +42,7 @@ private:
 
     XMLElement *GetInput(std::string semantic, XMLElement *element);
 
-    void BuildBuffer(unsigned short *indices, int indicesCount, int primitiveCount, Geometry *g);
+    void BuildBuffer(unsigned short *indices, int indicesCount, Geometry *g);
 
 public:
     explicit ColladaLoader(std::string filename);

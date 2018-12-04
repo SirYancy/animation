@@ -56,7 +56,6 @@ void ColladaLoader::ReadGeometry(Geometry *data) {
     data->normals = ReadElement(source);
     input->QueryAttribute("offset", &data->normals.offset);
 
-
     // Process Texture Data
     input = GetInput("TEXCOORD", triangles);
     sourceName = std::string(input->Attribute("source"));
@@ -87,7 +86,7 @@ void ColladaLoader::ReadGeometry(Geometry *data) {
         indices[index] = (unsigned short) atoi(strtok(NULL, " "));
     }
 
-    BuildBuffer(indices, indicesCount, primitiveCount, data);
+    BuildBuffer(indices, indicesCount, data);
 
     printf("Geometry Loaded\n");
     free(indices);
@@ -158,25 +157,24 @@ XMLElement *ColladaLoader::GetInput(std::string semantic, XMLElement *element) {
     return nullptr;
 }
 
-void ColladaLoader::BuildBuffer(unsigned short *indices, int indicesCount, int primitiveCount, Geometry *g) {
+void ColladaLoader::BuildBuffer(unsigned short *indices, int indicesCount, Geometry *g) {
     g->vertexData = new std::vector<float>();
 
     for (int i = 0; i < indicesCount; i++) {
 
-        if (i % 3 == 0) { // Do Position
-            printf("Position\n");
+        if (i % 4 == 0) { // Do Position
             g->vertexData->push_back(((float *) (g->position.data))[indices[i] * g->position.stride]);
             g->vertexData->push_back(((float *) (g->position.data))[indices[i] * g->position.stride + 1]);
             g->vertexData->push_back(((float *) (g->position.data))[indices[i] * g->position.stride + 2]);
-        } else if (i % 3 == 1) { // Do normals
-            printf("Normals\n");
+        } else if (i % 4 == 1) { // Do normals
             g->vertexData->push_back(((float *) (g->normals.data))[indices[i] * g->normals.stride]);
             g->vertexData->push_back(((float *) (g->normals.data))[indices[i] * g->normals.stride + 1]);
             g->vertexData->push_back(((float *) (g->normals.data))[indices[i] * g->normals.stride + 2]);
-        } else { //i%3 == 2  Do Texcoords
-            printf("Tex\n");
+        } else if (i % 4 == 2){ //i%3 == 2  Do Texcoords
             g->vertexData->push_back(((float *) (g->texCoords.data))[indices[i] * g->texCoords.stride]);
             g->vertexData->push_back(((float *) (g->texCoords.data))[indices[i] * g->texCoords.stride + 1]);
+        } else {
+
         }
 
     }

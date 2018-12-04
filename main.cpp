@@ -13,6 +13,8 @@ void CreateShaderProgram(GLuint &vertShader, GLuint &fragShader);
 
 void CreateBuffers(Geometry *g);
 
+void LoadTexture(GLenum texture, GLuint *id, const char *filename, const char *samplerID, const int index);
+
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
@@ -20,9 +22,11 @@ void CreateBuffers(Geometry *g);
 GLuint shaderProgram;
 GLuint vao, vbos;
 
-const char *model = "../models/plane.dae";
+const char *model = "../models/cowboy2.dae";
 const char *vertfn = "../shaders/vert.glsl";
 const char *fragfn = "../shaders/frag.glsl";
+
+const char *bricktexFN = "../textures/brick.bmp";
 
 int main() {
     SDL_Init(SDL_INIT_VIDEO);
@@ -70,6 +74,9 @@ int main() {
 
     CreateBuffers(geometry);
 
+    GLuint brickTex;
+    LoadTexture(GL_TEXTURE0, &brickTex, bricktexFN, "brick", 0);
+
     glEnable(GL_DEPTH_TEST);
 
     bool quit = false;
@@ -107,7 +114,7 @@ int main() {
         glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
         glm::mat4 view = glm::lookAt(
-                glm::vec3(0.5f, -5.f, 0.5f),
+                glm::vec3(5.0f, -20.f, 10.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, 1.0f));
         GLint uniView = glGetUniformLocation(shaderProgram, "view");
@@ -139,10 +146,10 @@ void CreateBuffers(Geometry *g) {
 
     float *data = g->vertexData->data();
 
-    for(int i = 0; i < g->vertexData->size(); i++){
-        if(i%8 == 0) printf("Vertex\n");
-        printf("%f\n",data[i]);
-    }
+//    for(int i = 0; i < g->vertexData->size(); i++){
+//        if(i%8 == 0) printf("Vertex\n");
+//        printf("%f\n",data[i]);
+//    }
 
 
     glBufferData(GL_ARRAY_BUFFER, g->vertexData->size() * sizeof(float), data, GL_STATIC_DRAW);
@@ -216,4 +223,28 @@ void CreateShaderProgram(GLuint &vertShader, GLuint &fragShader) {
     glBindFragDataLocation(shaderProgram, 0, "outColor");
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
+}
+
+void LoadTexture(GLenum texture, GLuint *id, const char *filename, const char *samplerID, const int index){
+    SDL_Surface *surface = SDL_LoadBMP(filename);
+    if(surface == nullptr){
+        printf("Error: \"%s\"\n", SDL_GetError());
+    }
+
+    glGenTextures(1, id);
+
+    glActiveTexture(texture);
+    glBindTexture(GL_TEXTURE_2D, *id);
+
+    glUniform1i(glGetUniformLocation(shaderProgram, samplerID), index);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surface->pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    SDL_FreeSurface(surface);
 }

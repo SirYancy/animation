@@ -4,7 +4,7 @@ in vec3 position;
 in vec3 inNormal;
 in vec3 inTexCoord;
 
-const vec3 inLightDir = normalize(vec3(-1,-1,-1));
+const vec3 inLightDir = normalize(vec3(1,1,1));
 
 uniform mat4 model;
 uniform mat4 view;

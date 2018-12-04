@@ -8,7 +8,7 @@ in vec2 texcoord;
 
 out vec4 outColor;
 
-uniform int texID;
+uniform sampler2D brick;
 
 const float ambient = .3;
 
@@ -16,7 +16,10 @@ void main() {
     vec3 color;
     vec3 normal = normalize(vertNormal);
 
-    color = Color;
+     color = Color;
+
+//    color = texture(brick, texcoord).rgb;
+
 
     vec3 diffuseC = color*max(dot(-lightDir, normal),0.0);
     vec3 ambC = color*ambient;
@@ -29,4 +32,3 @@ void main() {
     outColor = vec4(oColor, 1);
 
 }
-
